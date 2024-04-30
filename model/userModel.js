@@ -1,4 +1,5 @@
 const { default: mongoose } = require("mongoose");
+const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -28,6 +29,17 @@ const userSchema = new mongoose.Schema({
     },
   },
 
+  role: {
+    type: String,
+    required: [true, "user must need a role"],
+    default: "user",
+  },
+
+  profileImg: {
+    type: String,
+    default: "default.jpeg",
+  },
+
   confirmPassword: {
     type: String,
     required: [true, "Confirm password is missing"],
@@ -40,6 +52,17 @@ const userSchema = new mongoose.Schema({
     },
   },
 });
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return;
+  this.password = await bcrypt.hash(this.password, 13);
+  this.confirmPassword = undefined;
+  next();
+});
+
+userSchema.methods.login = async function (password, hashedPassowrd) {
+  return bcrypt.compare(password, hashedPassowrd);
+};
 
 const User = mongoose.model("User", userSchema);
 

@@ -1,9 +1,18 @@
 import {useForm} from 'react-hook-form'
 import *  as yup from 'yup';
 import { yupResolver } from "@hookform/resolvers/yup"
+import axios from 'axios'
+import { Loader } from 'rsuite';
+import { useDispatch } from 'react-redux';
+import 'rsuite/Loader/styles/index.css';
 
 import Button from "./Button"
 import Input from "./Input"
+import { login } from '../features/authentication/authenticationSlice';
+import { Navigate, redirect, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+
+
 
 const defaultValues = {
   name:"",
@@ -26,10 +35,34 @@ const validationSchema = yup.object({
 }).required()
 
 export default function Signup() {
-  const {register, handleSubmit, formState:{errors}} = useForm({defaultValues, resolver:yupResolver(validationSchema)})
+  const {register, handleSubmit, formState:{errors, isSubmitting}, setError} = useForm({defaultValues, resolver:yupResolver(validationSchema)})
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const onSubmit = function(data) {
-    
+  useEffect(() => {
+   const data = JSON.parse(localStorage.getItem('user'));
+   if(data) navigate('/home')
+  },[navigate])
+
+  const onSubmit = async function(data) {
+
+    try{
+      const res = await axios({
+        method: "POST",
+        url:"http://localhost:3000/api/v1/users/signup",
+        data
+      })
+
+    const user = res.data.data
+    localStorage.setItem('user', JSON.stringify(user));
+    dispatch(login(user.user, user.token))
+      navigate('/home')
+    }catch(err){
+      console.log(err)
+      const {path, errorMessage} = err.response.data;
+      setError(path, {type:"server", message: errorMessage})
+    }
+
   }
 
 
@@ -40,9 +73,10 @@ export default function Signup() {
     <Input error={errors} name="name" register={register} label="name" placeholder="name"/>
     <Input error={errors} name="username" register={register} label="username" placeholder="username"/>
     <Input error={errors} name="password" register={register} label="password" placeholder="password"/>
+    
     <Input error={errors} name="confirmPassword" register={register} label="confirm password" placeholder="password"/>
     <div className="">
-    <Button type="primary">signup</Button>
+    <Button  type="primary">{isSubmitting ?<div className='flex gap-2 justify-center items-center'><span>singup</span> <Loader size='sm'/> </div>:'signup'}</Button>
     </div>
 
   </form>
